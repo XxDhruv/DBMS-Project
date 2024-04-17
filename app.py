@@ -13,13 +13,14 @@ curr.executescript('''
   drop table if exists recently_played_artists;
   
   CREATE TABLE recently_played_artists(
-    artist_id TEXT,
-    name TEXT
+    artist_id TEXT PRIMARY KEY NOT NULL,
+    name TEXT UNIQUE NOT NULL
   );
   CREATE TABLE recently_played_songs(
-    track_id TEXT,
-    art_id TEXT,
-    title TEXT
+    track_id TEXT PRIMARY KEY NOT NULL,
+    art_id TEXT UNIQUE NOT NULL,
+    title TEXT UNIQUE NOT NULL,
+    FOREIGN KEY(art_id) REFERENCES recently_played_artists(artist_id)
   );
 ''')
 
@@ -90,9 +91,10 @@ def get_playlists():
     'Authorization': f"Bearer {session['access_token']}"
   }
 
-  response = requests.get(API_QUERY_URL + 'me/player/recently-played?limit=10', headers=headers)
+  response = requests.get(API_QUERY_URL + 'me/player/recently-played?limit=50', headers=headers)
   parsed = json.loads(response.text)
-  for i in range(10):
+  tracker = len(parsed['items'])
+  for i in range(tracker):
     art_name = (parsed['items'][i]['track']['artists'][0]['name'])
     art_id = ((parsed['items'][i]['track']['artists'][0]['id']))
     track_name = (parsed['items'][i]['track']['name'])
@@ -102,7 +104,7 @@ def get_playlists():
     print(track_id)
     print(track_name)
     curr.execute('insert or ignore into recently_played_artists (artist_id, name) values (?,?)', (art_id, art_name,))
-    curr.execute('insert or ignore into recently_played_songs (track_id,art_id,title) values (?,?,?)',(track_id, art_id, track_name,))
+    curr.execute('insert or ignore into recently_played_songs (track_id,art_id,title) values (?,?,?)', (track_id, art_id, track_name,))
     conn.commit()
   playlists = response.json()
   return jsonify(playlists)
